@@ -9,7 +9,7 @@ as a step output. Also posts the index to the job summary.
 ```yaml
 - uses: actions/checkout@v6
 - id: trellis
-  uses: oakgreencc/trellis-action@main
+  uses: oakgreencc/trellis-action@v1
   with:
     path: .                # workspace to audit
 - run: echo "sloppiness index: ${{ steps.trellis.outputs.index }}"
@@ -59,3 +59,10 @@ fails the step unless `fail-on-policy: "false"`.
 ## License
 
 MIT — see [LICENSE](LICENSE). Trellis itself is MIT (© Jaymin West).
+
+## Releases
+
+Every push to `main` is versioned from [conventional commits](https://www.conventionalcommits.org/)
+(`feat:` → minor, `fix:` → patch, `BREAKING CHANGE`/`!` → major). A `vX.Y.Z` tag and GitHub
+release are cut automatically and the floating major tag (`v1`, …) is moved. Commits with no
+releasable type (`chore:`, `docs:`, …) don't cut a release.
