@@ -12,7 +12,7 @@ as a step output. Also posts the index to the job summary.
   uses: oakgreencc/trellis-action@v1
   with:
     path: .                # workspace to audit
-- run: echo "sloppiness index: ${{ steps.trellis.outputs.index }}"
+- run: echo "sloppiness index: ${{ steps.trellis.outputs.index }} (grade ${{ steps.trellis.outputs.grade }})"
 ```
 
 Gate on a threshold:
@@ -37,18 +37,34 @@ fails the step unless `fail-on-policy: "false"`.
 | `config` | | Explicit `trellis.yaml` |
 | `fail-on-policy` | `true` | Fail the step on trellis exit `2` |
 | `extra-args` | | Extra args passed verbatim to `trellis audit` |
+| `grade-thresholds` | `10,20,35,50` | Inclusive upper bounds for grades A,B,C,D; above the last → F |
 
 ## Outputs
 
 | name | description |
 |---|---|
 | `index` | 0–100 sloppiness index (lower is better) |
+| `grade` | Letter grade `A`–`F` from the index (see `grade-thresholds`) |
 | `partial` | `true` if scored from an incomplete analysis |
 | `completeness` | `complete` / `incomplete` |
 | `findings` | Number of findings |
 | `exit-code` | `0` pass · `2` policy failure · `1` operational error |
 | `report-path` | Path to the JSON report (upload it with `actions/upload-artifact`) |
 | `analyzer-version` | trellis version that produced the report |
+
+## Grading
+
+The index is trellis's; the letter grade is this action's convention over it (lower index = better):
+
+| grade | index |
+|---|---|
+| A | ≤ 10 |
+| B | ≤ 20 |
+| C | ≤ 35 |
+| D | ≤ 50 |
+| F | > 50 |
+
+Override with `grade-thresholds: "5,15,30,45"`.
 
 ## Notes
 

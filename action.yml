@@ -34,11 +34,18 @@ inputs:
     description: Extra arguments passed verbatim to `trellis audit`
     required: false
     default: ""
+  grade-thresholds:
+    description: "Upper bounds (inclusive) for grades A,B,C,D; anything above the last is F"
+    required: false
+    default: "10,20,35,50"
 
 outputs:
   index:
     description: The 0-100 sloppiness index (lower is better)
     value: ${{ steps.audit.outputs.index }}
+  grade:
+    description: Letter grade A-F derived from the index via grade-thresholds
+    value: ${{ steps.audit.outputs.grade }}
   partial:
     description: "true when the score was computed from an incomplete analysis"
     value: ${{ steps.audit.outputs.partial }}
@@ -85,6 +92,7 @@ runs:
         CONFIG: ${{ inputs.config }}
         FAIL_ON_POLICY: ${{ inputs.fail-on-policy }}
         EXTRA_ARGS: ${{ inputs.extra-args }}
+        GRADE_THRESHOLDS: ${{ inputs.grade-thresholds }}
       run: |
         set -uo pipefail
         args=(audit "$AUDIT_PATH" --out "$REPORT" --quiet)
@@ -112,9 +120,14 @@ runs:
         } >> "$GITHUB_OUTPUT"
 
         index=$(jq -r '.score.index' "$REPORT")
-        echo "::notice title=Trellis sloppiness index::$index / 100 (lower is better)"
+        grade=$(jq -rn --argjson i "$index" --arg t "$GRADE_THRESHOLDS" '
+          ($t | split(",") | map(tonumber)) as $b
+          | ["A","B","C","D"] as $g
+          | first(range($b | length) | select($i <= $b[.]) | $g[.]) // "F"')
+        echo "grade=$grade" >> "$GITHUB_OUTPUT"
+        echo "::notice title=Trellis sloppiness index::$index / 100 — grade $grade (lower is better)"
         {
-          echo "## Trellis sloppiness index: **$index** / 100"
+          echo "## Trellis sloppiness index: **$index** / 100 — grade **$grade**"
           echo
           echo "Lower is better. Findings: $(jq -r '.findings | length' "$REPORT") · completeness: $(jq -r '.completeness' "$REPORT") · analyzer $(jq -r '.analyzerVersion' "$REPORT")"
         } >> "$GITHUB_STEP_SUMMARY"

@@ -25,9 +25,9 @@ jobs:
           fail-on-policy: "false"
 
       - run: |
-          echo "index=${{ steps.trellis.outputs.index }}"
+          echo "index=${{ steps.trellis.outputs.index }} grade=${{ steps.trellis.outputs.grade }}"
           echo "exit-code=${{ steps.trellis.outputs.exit-code }}"
-          test -n "${{ steps.trellis.outputs.index }}"
+          test -n "${{ steps.trellis.outputs.index }}" && test -n "${{ steps.trellis.outputs.grade }}"
 
       - uses: actions/upload-artifact@v4
         with:
