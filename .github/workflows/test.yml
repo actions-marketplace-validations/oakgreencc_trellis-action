@@ -1,0 +1,35 @@
+name: Test action
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  self-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      # Audit trellis itself as a known-good TypeScript workspace.
+      - uses: actions/checkout@v6
+        with:
+          repository: jayminwest/trellis
+          path: target
+
+      - id: trellis
+        uses: ./
+        with:
+          path: target
+          report-path: target/trellis-report.json
+          fail-on-policy: "false"
+
+      - run: |
+          echo "index=${{ steps.trellis.outputs.index }}"
+          echo "exit-code=${{ steps.trellis.outputs.exit-code }}"
+          test -n "${{ steps.trellis.outputs.index }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trellis-report
+          path: target/trellis-report.json

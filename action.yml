@@ -1,0 +1,126 @@
+name: Trellis Sloppiness Audit
+description: Run a trellis structural audit on a TypeScript workspace and expose the 0-100 sloppiness index as a step output
+author: OakGreen Cloud Consulting LLC
+branding:
+  icon: activity
+  color: green
+
+inputs:
+  path:
+    description: Workspace to audit (relative to the checked-out repo)
+    required: false
+    default: "."
+  trellis-ref:
+    description: Git ref (branch, tag, or SHA) of jayminwest/trellis to run
+    required: false
+    default: main
+  report-path:
+    description: Where to write the JSON report
+    required: false
+    default: trellis-report.json
+  baseline:
+    description: Optional saved report.json to compare against (enables regression policy)
+    required: false
+    default: ""
+  config:
+    description: Optional explicit trellis.yaml (default is discovered at the workspace root)
+    required: false
+    default: ""
+  fail-on-policy:
+    description: Fail the step when trellis policy is tripped (exit 2)
+    required: false
+    default: "true"
+  extra-args:
+    description: Extra arguments passed verbatim to `trellis audit`
+    required: false
+    default: ""
+
+outputs:
+  index:
+    description: The 0-100 sloppiness index (lower is better)
+    value: ${{ steps.audit.outputs.index }}
+  partial:
+    description: "true when the score was computed from an incomplete analysis"
+    value: ${{ steps.audit.outputs.partial }}
+  completeness:
+    description: "'complete' or 'incomplete'"
+    value: ${{ steps.audit.outputs.completeness }}
+  findings:
+    description: Number of findings in the report
+    value: ${{ steps.audit.outputs.findings }}
+  exit-code:
+    description: "trellis exit code: 0 pass, 2 policy failure, 1 operational error"
+    value: ${{ steps.audit.outputs.exit-code }}
+  report-path:
+    description: Path to the written JSON report
+    value: ${{ steps.audit.outputs.report-path }}
+  analyzer-version:
+    description: trellis analyzer version that produced the report
+    value: ${{ steps.audit.outputs.analyzer-version }}
+
+runs:
+  using: composite
+  steps:
+    - uses: oven-sh/setup-bun@v2
+
+    - name: Install trellis
+      shell: bash
+      env:
+        TRELLIS_REF: ${{ inputs.trellis-ref }}
+      run: |
+        set -euo pipefail
+        dir="$RUNNER_TEMP/trellis"
+        git clone --quiet https://github.com/jayminwest/trellis "$dir"
+        git -C "$dir" checkout --quiet "$TRELLIS_REF"
+        (cd "$dir" && bun install --frozen-lockfile --production --silent)
+        echo "TRELLIS_BIN=$dir/src/cli/main.ts" >> "$GITHUB_ENV"
+
+    - name: Audit
+      id: audit
+      shell: bash
+      env:
+        AUDIT_PATH: ${{ inputs.path }}
+        REPORT: ${{ inputs.report-path }}
+        BASELINE: ${{ inputs.baseline }}
+        CONFIG: ${{ inputs.config }}
+        FAIL_ON_POLICY: ${{ inputs.fail-on-policy }}
+        EXTRA_ARGS: ${{ inputs.extra-args }}
+      run: |
+        set -uo pipefail
+        args=(audit "$AUDIT_PATH" --out "$REPORT" --quiet)
+        [ -n "$BASELINE" ] && args+=(--baseline "$BASELINE")
+        [ -n "$CONFIG" ] && args+=(--config "$CONFIG")
+        # shellcheck disable=SC2206
+        [ -n "$EXTRA_ARGS" ] && args+=($EXTRA_ARGS)
+
+        bun "$TRELLIS_BIN" "${args[@]}"
+        code=$?
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+        echo "report-path=$REPORT" >> "$GITHUB_OUTPUT"
+
+        if [ "$code" -eq 1 ] || [ ! -s "$REPORT" ]; then
+          echo "::error::trellis failed operationally (exit $code) — see log above"
+          exit 1
+        fi
+
+        {
+          echo "index=$(jq -r '.score.index' "$REPORT")"
+          echo "partial=$(jq -r '.score.partial' "$REPORT")"
+          echo "completeness=$(jq -r '.completeness' "$REPORT")"
+          echo "findings=$(jq -r '.findings | length' "$REPORT")"
+          echo "analyzer-version=$(jq -r '.analyzerVersion' "$REPORT")"
+        } >> "$GITHUB_OUTPUT"
+
+        index=$(jq -r '.score.index' "$REPORT")
+        echo "::notice title=Trellis sloppiness index::$index / 100 (lower is better)"
+        {
+          echo "## Trellis sloppiness index: **$index** / 100"
+          echo
+          echo "Lower is better. Findings: $(jq -r '.findings | length' "$REPORT") · completeness: $(jq -r '.completeness' "$REPORT") · analyzer $(jq -r '.analyzerVersion' "$REPORT")"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        if [ "$code" -eq 2 ]; then
+          echo "::error::trellis policy tripped — see $REPORT"
+          [ "$FAIL_ON_POLICY" = "true" ] && exit 2
+        fi
+        exit 0
