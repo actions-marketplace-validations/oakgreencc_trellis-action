@@ -9,7 +9,7 @@ as a step output. Also posts the index to the job summary.
 ```yaml
 - uses: actions/checkout@v6
 - id: trellis
-  uses: oakgreencc/trellis-action@v1
+  uses: oakgreencc/trellis-action@v0
   with:
     path: .                # workspace to audit
 - run: echo "sloppiness index: ${{ steps.trellis.outputs.index }} (grade ${{ steps.trellis.outputs.grade }})"
@@ -56,13 +56,13 @@ fails the step unless `fail-on-policy: "false"`.
 
 The index is trellis's; the letter grade is this action's convention over it (lower index = better):
 
-| grade | index |
-|---|---|
-| A | ≤ 10 |
-| B | ≤ 20 |
-| C | ≤ 35 |
-| D | ≤ 50 |
-| F | > 50 |
+| grade | index | |
+|---|---|---|
+| A | ≤ 10 | 🌳 |
+| B | ≤ 20 | 🌿 |
+| C | ≤ 35 | 🍂 |
+| D | ≤ 50 | 🥀 |
+| F | > 50 | 🔥 |
 
 Override with `grade-thresholds: "5,15,30,45"`.
 
@@ -80,5 +80,5 @@ MIT — see [LICENSE](LICENSE). Trellis itself is MIT (© Jaymin West).
 
 Every push to `main` is versioned from [conventional commits](https://www.conventionalcommits.org/)
 (`feat:` → minor, `fix:` → patch, `BREAKING CHANGE`/`!` → major). A `vX.Y.Z` tag and GitHub
-release are cut automatically and the floating major tag (`v1`, …) is moved. Commits with no
+release are cut automatically and the floating major tag (`v0` today, `v1` once the action stabilises) is moved. Commits with no
 releasable type (`chore:`, `docs:`, …) don't cut a release.

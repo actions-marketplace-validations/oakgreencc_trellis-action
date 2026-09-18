@@ -125,9 +125,10 @@ runs:
           | ["A","B","C","D"] as $g
           | first(range($b | length) | select($i <= $b[.]) | $g[.]) // "F"')
         echo "grade=$grade" >> "$GITHUB_OUTPUT"
-        echo "::notice title=Trellis sloppiness index::$index / 100 — grade $grade (lower is better)"
+        case $grade in A) emoji=🌳 ;; B) emoji=🌿 ;; C) emoji=🍂 ;; D) emoji=🥀 ;; *) emoji=🔥 ;; esac
+        echo "::notice title=Trellis sloppiness index::$emoji $index / 100 — grade $grade (lower is better)"
         {
-          echo "## Trellis sloppiness index: **$index** / 100 — grade **$grade**"
+          echo "## $emoji Trellis sloppiness index: **$index** / 100 — grade **$grade**"
           echo
           echo "Lower is better. Findings: $(jq -r '.findings | length' "$REPORT") · completeness: $(jq -r '.completeness' "$REPORT") · analyzer $(jq -r '.analyzerVersion' "$REPORT")"
         } >> "$GITHUB_STEP_SUMMARY"
