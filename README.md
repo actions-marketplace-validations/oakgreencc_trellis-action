@@ -1,26 +1,26 @@
-# trellis-action
+# slop-score
 
 Lightweight composite GitHub Action that runs [trellis](https://github.com/jayminwest/trellis)
-against a TypeScript workspace and exposes the 0–100 **sloppiness index** (lower is better)
-as a step output. Also posts the index to the job summary.
+against a TypeScript workspace and exposes the 0–100 **slop score** (lower is better)
+as a step output. Also posts the score to the job summary.
 
 ## Usage
 
 ```yaml
 - uses: actions/checkout@v6
-- id: trellis
-  uses: oakgreencc/trellis-action@v0
+- id: slop
+  uses: oakgreencc/slop-score@v0
   with:
     path: .                # workspace to audit
-- run: echo "sloppiness index: ${{ steps.trellis.outputs.index }} (grade ${{ steps.trellis.outputs.grade }})"
+- run: echo "slop score: ${{ steps.slop.outputs.index }} (grade ${{ steps.slop.outputs.grade }})"
 ```
 
 Gate on a threshold:
 
 ```yaml
 - run: |
-    test "$(printf '%.0f' "${{ steps.trellis.outputs.index }}")" -le 40 \
-      || { echo "::error::sloppiness index too high"; exit 1; }
+    test "$(printf '%.0f' "${{ steps.slop.outputs.index }}")" -le 40 \
+      || { echo "::error::slop score too high"; exit 1; }
 ```
 
 Or declare a `trellis.yaml` policy in the audited repo — a tripped policy (trellis exit `2`)
@@ -43,8 +43,8 @@ fails the step unless `fail-on-policy: "false"`.
 
 | name | description |
 |---|---|
-| `index` | 0–100 sloppiness index (lower is better) |
-| `grade` | Letter grade `A`–`F` from the index (see `grade-thresholds`) |
+| `index` | 0–100 slop score (lower is better) |
+| `grade` | Letter grade `A`–`F` from the slop score (see `grade-thresholds`) |
 | `partial` | `true` if scored from an incomplete analysis |
 | `completeness` | `complete` / `incomplete` |
 | `findings` | Number of findings |
@@ -54,9 +54,9 @@ fails the step unless `fail-on-policy: "false"`.
 
 ## Grading
 
-The index is trellis's; the letter grade is this action's convention over it (lower index = better):
+The score is trellis's sloppiness index; the letter grade is this action's convention over it (lower = better):
 
-| grade | index | |
+| grade | score | |
 |---|---|---|
 | A | ≤ 10 | 🌳 |
 | B | ≤ 20 | 🌿 |

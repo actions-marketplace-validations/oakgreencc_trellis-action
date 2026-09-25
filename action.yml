@@ -1,5 +1,5 @@
-name: Trellis Sloppiness Audit
-description: Run a trellis structural audit on a TypeScript workspace and expose the 0-100 sloppiness index as a step output
+name: Slop Score
+description: Score a TypeScript workspace with a trellis structural audit and expose the 0-100 slop score as a step output
 author: OakGreen Cloud Consulting LLC
 branding:
   icon: activity
@@ -41,10 +41,10 @@ inputs:
 
 outputs:
   index:
-    description: The 0-100 sloppiness index (lower is better)
+    description: The 0-100 slop score (lower is better)
     value: ${{ steps.audit.outputs.index }}
   grade:
-    description: Letter grade A-F derived from the index via grade-thresholds
+    description: Letter grade A-F derived from the slop score via grade-thresholds
     value: ${{ steps.audit.outputs.grade }}
   partial:
     description: "true when the score was computed from an incomplete analysis"
@@ -126,9 +126,9 @@ runs:
           | first(range($b | length) | select($i <= $b[.]) | $g[.]) // "F"')
         echo "grade=$grade" >> "$GITHUB_OUTPUT"
         case $grade in A) emoji=🌳 ;; B) emoji=🌿 ;; C) emoji=🍂 ;; D) emoji=🥀 ;; *) emoji=🔥 ;; esac
-        echo "::notice title=Trellis sloppiness index::$emoji $index / 100 — grade $grade (lower is better)"
+        echo "::notice title=Slop score::$emoji $index / 100 — grade $grade (lower is better)"
         {
-          echo "## $emoji Trellis sloppiness index: **$index** / 100 — grade **$grade**"
+          echo "## $emoji Slop score: **$index** / 100 — grade **$grade**"
           echo
           echo "Lower is better. Findings: $(jq -r '.findings | length' "$REPORT") · completeness: $(jq -r '.completeness' "$REPORT") · analyzer $(jq -r '.analyzerVersion' "$REPORT")"
         } >> "$GITHUB_STEP_SUMMARY"
